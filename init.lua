@@ -50,6 +50,8 @@ cyclefocus = {
 	-- This is normally done to avoid interference from sloppy focus handling,
 	-- but can be disabled if you do not use sloppy focus.
 	move_mouse_pointer = true,
+	-- Display the switcher in the center of the screen (right-aligned by default).
+	centered = true,
 	-- How many entries should get displayed before and after the current one?
 	display_next_count = 3,
 	display_prev_count = 3,
@@ -190,6 +192,12 @@ end
 cyclefocus.filters = {
 	-- Filter clients on the same screen.
 	same_screen = function(c, source_c)
+		-- fix for error message
+		--- cyclefocus/init.lua:199: attempt to index a nil value (local `source_c`)
+		--- reproduced when you try to mod+tab on tag without clients but some other tag have an client
+		if nil == source_c then
+			return
+		end
 		return (c.screen or capi.mouse.screen) == source_c.screen
 	end,
 	same_class = function(c, source_c)
@@ -530,9 +538,11 @@ local show_client_restore_client_props_others = {}
 
 local callback_show_client_lock
 local decorate_if_showing_client = function(c)
-	if c == showing_client then
-		cyclefocus.callback_show_client(c)
-	end
+	-- this is causing an endless loop. Don't see any changes in behaviour, if I skip this.
+	--	if c == showing_client then
+	--		cyclefocus.callback_show_client(c)
+	--	end
+	return {}
 end
 -- A table with property callbacks.  Could be merged with decorate_if_showing_client.
 local update_show_client_restore_client_props = {}
@@ -1074,11 +1084,19 @@ cyclefocus.cycle = function(startdirection_or_args, args)
 			wbox_screen = initial_screen
 			local wa = screen[wbox_screen].workarea
 			local w = math.ceil(wa.width * 0.618)
-			wbox:geometry({
-				-- right-align.
-				x = math.ceil(wa.x + wa.width - w),
-				width = w,
-			})
+			if args.centered then
+				wbox:geometry({
+					-- position in center.
+					x = wa.x + floor(wa.width / 2 - w / 2),
+					width = w,
+				})
+			else
+				wbox:geometry({
+					-- right-align.
+					x = math.ceil(wa.x + wa.width - w),
+					width = w,
+				})
+			end
 		end
 		local wbox_height = 0
 
